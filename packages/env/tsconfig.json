@@ -1,0 +1,3 @@
+{
+  "extends": "@tikli/config/tsconfig.base.json"
+}
