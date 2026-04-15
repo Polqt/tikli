@@ -1,0 +1,13 @@
+name = "tikli-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Non-secret vars go here. Secrets are set via `wrangler secret put`.
+# CLERK_PUBLISHABLE_KEY = "pk_..."
+
+# For local dev, create a .dev.vars file:
+# CLERK_SECRET_KEY=sk_test_...
+# CONVEX_URL=https://...
+# CONVEX_DEPLOY_KEY=...
