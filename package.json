@@ -19,7 +19,8 @@
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
-    "dev:server": "turbo -F @tikli/backend dev",
+    "dev:backend": "turbo -F @tikli/backend dev",
+    "dev:api": "turbo -F @tikli/api dev",
     "dev:setup": "turbo -F @tikli/backend dev:setup",
     "check": "biome check --write ."
   },
