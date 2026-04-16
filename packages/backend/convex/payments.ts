@@ -81,16 +81,25 @@ export const markPayment = mutation({
       notes: args.notes,
     });
 
-    // Update cycle totalCollected — only if not already counted
+    // Update cycle totalCollected based on status transition
     const wasAlreadyCounted =
       payment.status === "paid" || payment.status === "late";
     const willBeCounted = args.status === "paid" || args.status === "late";
 
     if (!wasAlreadyCounted && willBeCounted) {
+      // Transitioning into a counted state — increment
       const cycle = await ctx.db.get(payment.cycleId);
       if (cycle) {
         await ctx.db.patch(payment.cycleId, {
           totalCollected: cycle.totalCollected + payment.amount,
+        });
+      }
+    } else if (wasAlreadyCounted && !willBeCounted) {
+      // Transitioning out of a counted state — decrement
+      const cycle = await ctx.db.get(payment.cycleId);
+      if (cycle) {
+        await ctx.db.patch(payment.cycleId, {
+          totalCollected: Math.max(0, cycle.totalCollected - payment.amount),
         });
       }
     }
@@ -147,17 +156,20 @@ export const bulkMarkPayments = mutation({
       });
 
       if (!wasAlreadyCounted && willBeCounted) {
-        const existing = cycleDeltas.get(payment.cycleId) ?? 0;
-        cycleDeltas.set(payment.cycleId, existing + payment.amount);
+        // Transitioning into counted state — add to delta
+        cycleDeltas.set(payment.cycleId, (cycleDeltas.get(payment.cycleId) ?? 0) + payment.amount);
+      } else if (wasAlreadyCounted && !willBeCounted) {
+        // Transitioning out of counted state — subtract from delta
+        cycleDeltas.set(payment.cycleId, (cycleDeltas.get(payment.cycleId) ?? 0) - payment.amount);
       }
     }
 
-    // Apply all cycle deltas in a single patch per cycle
+    // Apply all cycle deltas in a single patch per cycle (delta may be negative for downgrades)
     for (const [cycleId, delta] of cycleDeltas) {
       const cycle = await ctx.db.get(cycleId as never);
       if (cycle) {
         await ctx.db.patch(cycleId as never, {
-          totalCollected: cycle.totalCollected + delta,
+          totalCollected: Math.max(0, cycle.totalCollected + delta),
         });
       }
     }
