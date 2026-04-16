@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 
 export const listForCycle = query({
   args: { cycleId: v.id("cycles") },
@@ -135,7 +136,7 @@ export const bulkMarkPayments = mutation({
 
     const now = Date.now();
     // Track delta per cycle: cycleId -> additional amount to add
-    const cycleDeltas = new Map<string, number>();
+    const cycleDeltas = new Map<Id<"cycles">, number>();
 
     for (const paymentId of args.paymentIds) {
       const payment = await ctx.db.get(paymentId);
@@ -166,9 +167,9 @@ export const bulkMarkPayments = mutation({
 
     // Apply all cycle deltas in a single patch per cycle (delta may be negative for downgrades)
     for (const [cycleId, delta] of cycleDeltas) {
-      const cycle = await ctx.db.get(cycleId as never);
+      const cycle = await ctx.db.get(cycleId);
       if (cycle) {
-        await ctx.db.patch(cycleId as never, {
+        await ctx.db.patch(cycleId, {
           totalCollected: Math.max(0, cycle.totalCollected + delta),
         });
       }
