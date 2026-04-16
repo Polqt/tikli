@@ -9,8 +9,14 @@ export default function AuthRoutesLayout() {
   }
 
   if (isSignedIn) {
-    return <Redirect href={"/"} />;
+    return <Redirect href="/(app)/(tabs)/" />;
   }
 
-  return <Stack />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="welcome" />
+      <Stack.Screen name="sign-in" />
+      <Stack.Screen name="verify" />
+    </Stack>
+  );
 }

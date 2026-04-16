@@ -2,17 +2,16 @@ import "@/global.css";
 import { ClerkProvider, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { env } from "@tikli/env/native";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { Stack } from "expo-router";
-import { HeroUINativeProvider } from "heroui-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { AppThemeProvider } from "@/contexts/app-theme-context";
 
 export const unstable_settings = {
-  initialRouteName: "(drawer)",
+  initialRouteName: "(app)",
 };
 
 const convex = new ConvexReactClient(env.EXPO_PUBLIC_CONVEX_URL, {
@@ -21,10 +20,11 @@ const convex = new ConvexReactClient(env.EXPO_PUBLIC_CONVEX_URL, {
 
 function StackLayout() {
   return (
-    <Stack screenOptions={{}}>
-      <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="modal" options={{ title: "Modal", presentation: "modal" }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(app)" />
+      <Stack.Screen name="+not-found" />
     </Stack>
   );
 }
@@ -36,9 +36,7 @@ export default function Layout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <KeyboardProvider>
             <AppThemeProvider>
-              <HeroUINativeProvider>
-                <StackLayout />
-              </HeroUINativeProvider>
+              <StackLayout />
             </AppThemeProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
