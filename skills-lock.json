@@ -16,6 +16,11 @@
       "sourceType": "github",
       "computedHash": "f397ece3da422044705341ae85940fc3c36de8f5970e36146dda6ae6955974e2"
     },
+    "cloudflare": {
+      "source": "cloudflare/skills",
+      "sourceType": "github",
+      "computedHash": "4fabe7c7ae55f456647409361e7140bdff92d3ba2520034ebd5846e8aeab5caf"
+    },
     "convex-quickstart": {
       "source": "get-convex/agent-skills",
       "sourceType": "github",
