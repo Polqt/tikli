@@ -26,6 +26,11 @@
       "sourceType": "github",
       "computedHash": "f97654ffe564f0dacf9d5f9216c43bb39d2ba6d07332df62241071e7a021836f"
     },
+    "expo-cicd-workflows": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "computedHash": "6cd9fa605a8144d424daa02489633fa0b0fcb15d74e29d0d23e6d6d894fc51df"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
@@ -35,6 +40,11 @@
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
+    },
+    "wrangler": {
+      "source": "cloudflare/skills",
+      "sourceType": "github",
+      "computedHash": "48c91af8523bed9a1c865b836602b89ee876d05b07a3eae9d7b8de20e5c58341"
     }
   }
 }
