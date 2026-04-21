@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "@tikli/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/ui/Avatar";
 import { CurrencyText } from "@/components/ui/CurrencyText";
@@ -35,7 +35,7 @@ function groupStatusString(row: NonNullable<GroupHealthRow>): string {
   if (row.status === "forming") return `${row.joinedCount}/${row.maxMembers} joined`;
   if (row.status === "paused") return "Paused";
   if (row.status === "active") {
-    if (row.isRecipient) return `You receive ${formatDueDate(row.nextDueDate)}`;
+    if (row.isRecipient) return row.nextDueDate ? `You receive ${formatDueDate(row.nextDueDate)}` : "You receive next";
     const paid = `${row.paidCount}/${row.totalCount} paid`;
     const due = row.nextDueDate ? ` · due ${formatDueDate(row.nextDueDate)}` : "";
     return paid + due;
@@ -177,14 +177,15 @@ export default function PulseScreen() {
                 Your Groups
               </Text>
               <View style={{ borderTopWidth: 1, borderTopColor: "rgba(36,36,36,0.06)" }}>
-                {dashboardData.groupHealthRows.map((row, i) => row && (
-                  <View key={row.groupId}>
-                    <GroupHealthRowItem row={row} />
-                    {i < dashboardData.groupHealthRows.length - 1 && (
-                      <View style={{ height: 1, backgroundColor: "rgba(36,36,36,0.06)", marginLeft: 40 }} />
-                    )}
-                  </View>
-                ))}
+                <FlatList
+                  data={dashboardData.groupHealthRows.filter(Boolean)}
+                  keyExtractor={(row) => row!.groupId}
+                  renderItem={({ item }) => <GroupHealthRowItem row={item!} />}
+                  ItemSeparatorComponent={() => (
+                    <View style={{ height: 1, backgroundColor: "rgba(36,36,36,0.06)", marginLeft: 40 }} />
+                  )}
+                  scrollEnabled={false}
+                />
               </View>
             </View>
           ) : dashboardData?.totalGroupCount === 0 ? (

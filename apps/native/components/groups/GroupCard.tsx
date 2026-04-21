@@ -126,6 +126,11 @@ export function GroupCard({ group }: GroupCardProps) {
 							</Text>
 						);
 					}
+					return (
+						<Text style={{ fontSize: 12, color: subColor, marginTop: 10, fontWeight: "500" }}>
+							Active
+						</Text>
+					);
 				}
 				return null;
 			})()}

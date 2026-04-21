@@ -81,6 +81,8 @@ export default function GroupOverviewScreen() {
   const headerTextColor = lightHeader ? "#242424" : "#ffffff";
   const headerSubColor = lightHeader ? "rgba(36,36,36,0.55)" : "rgba(255,255,255,0.65)";
 
+  const statusDotColor = group?.status === "active" ? "#1D9E75" : group?.status === "forming" ? "#377CC8" : "#F59E0B";
+
   const paidProgress =
     cyclePaymentSummary && cyclePaymentSummary.total > 0
       ? cyclePaymentSummary.paid / cyclePaymentSummary.total
@@ -124,7 +126,7 @@ export default function GroupOverviewScreen() {
                   {group.name}
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: headerSubColor }} />
+                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: statusDotColor }} />
                   <Text style={{ fontSize: 13, color: headerSubColor, fontWeight: "500", textTransform: "capitalize" }}>
                     {group.status} · {FREQUENCY_LABEL[group.frequency as Frequency] ?? group.frequency}
                   </Text>
