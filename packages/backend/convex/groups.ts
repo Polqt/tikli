@@ -33,10 +33,53 @@ export const listForUser = query({
 
     const activeIds = memberships
       .filter((m) => m.status === "active")
-      .map((m) => m.groupId);
+      .map((m) => ({ groupId: m.groupId, membershipId: m._id }));
 
-    const groups = await Promise.all(activeIds.map((id) => ctx.db.get(id)));
-    return groups.filter(Boolean);
+    return await Promise.all(
+      activeIds.map(async ({ groupId, membershipId }) => {
+        const group = await ctx.db.get(groupId);
+        if (!group) return null;
+
+        const allMembers = await ctx.db
+          .query("groupMembers")
+          .withIndex("by_group", (q) => q.eq("groupId", group._id))
+          .collect();
+        const joinedMemberCount = allMembers.filter((m) => m.status === "active").length;
+
+        let currentCyclePaidCount: number | undefined;
+        let currentCycleTotalCount: number | undefined;
+        let isRecipientThisCycle: boolean | undefined;
+
+        if (group.status === "active") {
+          const currentCycle = await ctx.db
+            .query("cycles")
+            .withIndex("by_group_and_index", (q) =>
+              q.eq("groupId", group._id).eq("cycleIndex", group.currentCycleIndex),
+            )
+            .unique();
+
+          if (currentCycle) {
+            isRecipientThisCycle = currentCycle.recipientMemberId === membershipId;
+            const cyclePayments = await ctx.db
+              .query("payments")
+              .withIndex("by_cycle", (q) => q.eq("cycleId", currentCycle._id))
+              .collect();
+            currentCycleTotalCount = cyclePayments.length;
+            currentCyclePaidCount = cyclePayments.filter(
+              (p) => p.status === "paid" || p.status === "late" || p.status === "excused",
+            ).length;
+          }
+        }
+
+        return {
+          ...group,
+          joinedMemberCount,
+          currentCyclePaidCount,
+          currentCycleTotalCount,
+          isRecipientThisCycle,
+        };
+      }),
+    ).then((results) => results.filter(Boolean));
   },
 });
 
@@ -85,11 +128,21 @@ export const createGroup = mutation({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Resolve user by clerkId passed from the Hono layer
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
+    // tokenIdentifier is the full issuer-prefixed ID that upsertUser stores.
+    // Fall back to matching on the raw sub (args.clerkId) for forward-compat.
+    const identity = await ctx.auth.getUserIdentity();
+    const lookupId = identity?.tokenIdentifier ?? args.clerkId;
+    const user =
+      (await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", lookupId))
+        .unique()) ??
+      (lookupId !== args.clerkId
+        ? await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+            .unique()
+        : null);
     if (!user) throw new Error("User not found");
 
     const code = await generateUniqueCode(ctx);
