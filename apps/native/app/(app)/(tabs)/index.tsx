@@ -1,172 +1,214 @@
-import { Avatar } from "@/components/ui/Avatar";
-import { CurrencyText } from "@/components/ui/CurrencyText";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Skeleton, SkeletonBlock } from "@/components/ui/Skeleton";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@tikli/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Avatar } from "@/components/ui/Avatar";
+import { CurrencyText } from "@/components/ui/CurrencyText";
+import { Skeleton, SkeletonBlock } from "@/components/ui/Skeleton";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-export default function DashboardScreen() {
+const GROUP_COLORS = ["#E0533D", "#E78C9D", "#EED868", "#377CC8", "#469B88", "#9DA7D0"];
+
+function colorForName(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return GROUP_COLORS[Math.abs(h) % GROUP_COLORS.length]!;
+}
+
+function formatDueDate(ts?: number): string {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const today = new Date();
+  const diff = Math.round((d.getTime() - today.setHours(0, 0, 0, 0)) / 86400000);
+  if (diff === 0) return "today";
+  if (diff === 1) return "tomorrow";
+  if (diff <= 6) return d.toLocaleDateString("en-PH", { weekday: "long" });
+  return d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+}
+
+type DashboardData = NonNullable<ReturnType<typeof useQuery<typeof api.dashboard.getDashboardData>>>;
+type GroupHealthRow = NonNullable<DashboardData["groupHealthRows"]>[number];
+
+function groupStatusString(row: NonNullable<GroupHealthRow>): string {
+  if (row.status === "forming") return `${row.joinedCount}/${row.maxMembers} joined`;
+  if (row.status === "paused") return "Paused";
+  if (row.status === "active") {
+    if (row.isRecipient) return `You receive ${formatDueDate(row.nextDueDate)}`;
+    const paid = `${row.paidCount}/${row.totalCount} paid`;
+    const due = row.nextDueDate ? ` · due ${formatDueDate(row.nextDueDate)}` : "";
+    return paid + due;
+  }
+  return "";
+}
+
+function HeroSection({ data }: { data: DashboardData }) {
+  const router = useRouter();
+  const hero = data.heroState;
+  const bg =
+    hero.type === "owe" ? "#242424" : hero.type === "receive" ? "#1D9E75" : "rgba(36,36,36,0.05)";
+
+  return (
+    <TouchableOpacity
+      style={{ marginHorizontal: 20, marginBottom: 28, borderRadius: 20, backgroundColor: bg, padding: 22 }}
+      onPress={() => { if (hero.groupId) router.push(`/(app)/groups/${hero.groupId}`); }}
+      activeOpacity={hero.groupId ? 0.8 : 1}
+    >
+      {hero.type === "owe" && (
+        <>
+          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>
+            You owe this cycle
+          </Text>
+          <CurrencyText centavos={hero.amount ?? 0} style={{ fontSize: 36, fontWeight: "800", color: "#ffffff", letterSpacing: -1, lineHeight: 42 }} />
+          <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginTop: 4, fontWeight: "500" }}>
+            {hero.groupName}{hero.dueDate ? ` · due ${formatDueDate(hero.dueDate)}` : ""}
+          </Text>
+        </>
+      )}
+      {hero.type === "receive" && (
+        <>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Ionicons name="trophy" size={14} color="rgba(255,255,255,0.7)" />
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.5 }}>
+              You receive the pot
+            </Text>
+          </View>
+          <CurrencyText centavos={hero.amount ?? 0} style={{ fontSize: 36, fontWeight: "800", color: "#ffffff", letterSpacing: -1, lineHeight: 42 }} />
+          <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginTop: 4, fontWeight: "500" }}>
+            {hero.groupName}{hero.dueDate ? ` · ${formatDueDate(hero.dueDate)}` : ""}
+          </Text>
+        </>
+      )}
+      {hero.type === "clear" && (
+        <>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Ionicons name="checkmark-circle" size={18} color="#1D9E75" />
+            <Text style={{ fontSize: 15, fontWeight: "800", color: "#242424" }}>You're all clear</Text>
+          </View>
+          <Text style={{ fontSize: 13, color: "rgba(36,36,36,0.45)", fontWeight: "500" }}>
+            No payments due. Nice work.
+          </Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function GroupHealthRowItem({ row }: { row: NonNullable<GroupHealthRow> }) {
+  const router = useRouter();
+  const color = colorForName(row.name);
+  const isForming = row.status === "forming";
+
+  return (
+    <TouchableOpacity
+      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 20 }}
+      onPress={() => router.push(`/(app)/groups/${row.groupId}`)}
+      activeOpacity={0.6}
+    >
+      <View style={{
+        width: 8, height: 8, borderRadius: 4, marginRight: 12,
+        backgroundColor: isForming ? "transparent" : color,
+        borderWidth: isForming ? 2 : 0,
+        borderColor: isForming ? color : undefined,
+      }} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: "#242424", marginBottom: 1 }} numberOfLines={1}>
+          {row.name}
+        </Text>
+        <Text style={{ fontSize: 12, color: "rgba(36,36,36,0.45)", fontWeight: "500" }}>
+          {groupStatusString(row)}
+        </Text>
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        {row.isRecipient && <Ionicons name="trophy" size={13} color="#1D9E75" />}
+        <Ionicons name="chevron-forward" size={14} color="#242424" style={{ opacity: 0.2 }} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+export default function PulseScreen() {
   const { convexProfile } = useCurrentUser();
   const router = useRouter();
   const dashboardData = useQuery(api.dashboard.getDashboardData);
+  const isLoading = dashboardData === undefined;
+  const insets = useSafeAreaInsets();
+  const firstName = convexProfile?.displayName?.split(" ")[0] ?? convexProfile?.email?.split("@")[0] ?? "there";
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ padding: 20 }}>
-          {/* Greeting */}
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24, gap: 12 }}>
-            <Avatar
-              name={convexProfile?.displayName}
-              phone={convexProfile?.phoneNumber}
-              color={convexProfile?.avatarColor}
-              size="lg"
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, color: "#6B7280" }}>Good day,</Text>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }} numberOfLines={1}>
-                {convexProfile?.displayName ?? convexProfile?.phoneNumber ?? "Welcome!"}
-              </Text>
-            </View>
+    <View style={{ flex: 1, backgroundColor: "#F5F3EF" }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}>
+        {/* Header */}
+        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flex: 1, marginRight: 16 }}>
+            <Text style={{ fontSize: 13, color: "#242424", opacity: 0.4, fontWeight: "600", marginBottom: 2 }}>Pulse</Text>
+            <Text style={{ fontSize: 26, fontWeight: "800", color: "#242424", letterSpacing: -0.5 }} numberOfLines={1}>
+              {firstName}
+            </Text>
           </View>
+          <TouchableOpacity onPress={() => router.push("/(app)/(tabs)/profile")} activeOpacity={0.8}>
+            <Avatar name={convexProfile?.displayName ?? convexProfile?.email} color={convexProfile?.avatarColor} size="lg" />
+          </TouchableOpacity>
+        </View>
 
-          {/* Quick Stats */}
-          <Skeleton
-            isLoading={dashboardData === undefined}
-            skeleton={
-              <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <View key={i} style={{ flex: 1, backgroundColor: "#ffffff", borderRadius: 16, padding: 16 }}>
-                    <SkeletonBlock width="60%" height={12} style={{ marginBottom: 8 }} />
-                    <SkeletonBlock width="40%" height={24} />
+        {/* Hero */}
+        <Skeleton isLoading={isLoading} skeleton={<View style={{ marginHorizontal: 20, marginBottom: 28 }}><SkeletonBlock style={{ height: 100, borderRadius: 20 }} /></View>}>
+          {dashboardData && <HeroSection data={dashboardData} />}
+        </Skeleton>
+
+        {/* Group health rows */}
+        <Skeleton
+          isLoading={isLoading}
+          skeleton={
+            <View style={{ paddingHorizontal: 20, gap: 16 }}>
+              {[1, 2, 3].map((i) => (
+                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <SkeletonBlock style={{ width: 8, height: 8, borderRadius: 4 }} />
+                  <SkeletonBlock style={{ flex: 1, height: 14, borderRadius: 6 }} />
+                </View>
+              ))}
+            </View>
+          }
+        >
+          {dashboardData && dashboardData.groupHealthRows && dashboardData.groupHealthRows.length > 0 ? (
+            <View>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: "#242424", opacity: 0.32, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4, paddingHorizontal: 20 }}>
+                Your Groups
+              </Text>
+              <View style={{ borderTopWidth: 1, borderTopColor: "rgba(36,36,36,0.06)" }}>
+                {dashboardData.groupHealthRows.map((row, i) => row && (
+                  <View key={row.groupId}>
+                    <GroupHealthRowItem row={row} />
+                    {i < dashboardData.groupHealthRows.length - 1 && (
+                      <View style={{ height: 1, backgroundColor: "rgba(36,36,36,0.06)", marginLeft: 40 }} />
+                    )}
                   </View>
                 ))}
               </View>
-            }
-          >
-            {dashboardData && (
-              <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
-                <View
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#1D9E75",
-                    borderRadius: 16,
-                    padding: 16,
-                  }}
-                >
-                  <Text style={{ fontSize: 12, color: "#A7F3D0", marginBottom: 4 }}>Active Groups</Text>
-                  <Text style={{ fontSize: 28, fontWeight: "800", color: "#ffffff" }}>
-                    {dashboardData.activeGroupCount}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#ffffff",
-                    borderRadius: 16,
-                    padding: 16,
-                  }}
-                >
-                  <Text style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 4 }}>Pending Payments</Text>
-                  <Text style={{ fontSize: 28, fontWeight: "800", color: dashboardData.pendingPaymentCount > 0 ? "#EF4444" : "#111827" }}>
-                    {dashboardData.pendingPaymentCount}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </Skeleton>
-
-          {/* Upcoming Payouts */}
-          {dashboardData?.upcomingPayouts && dashboardData.upcomingPayouts.length > 0 && (
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: "#111827", marginBottom: 12 }}>
-                Your Upcoming Payouts
-              </Text>
-              {dashboardData.upcomingPayouts.map((payout) => (
-                <TouchableOpacity
-                  key={payout._id}
-                  style={{
-                    backgroundColor: "#F0FDF8",
-                    borderRadius: 14,
-                    padding: 16,
-                    marginBottom: 8,
-                    borderWidth: 1.5,
-                    borderColor: "#1D9E75",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                  onPress={() => router.push(`/(app)/groups/${payout.groupId}`)}
-                  activeOpacity={0.7}
-                >
-                  <View>
-                    <Text style={{ fontSize: 13, color: "#1D9E75", fontWeight: "700", marginBottom: 2 }}>
-                      🎉 You receive the pot!
-                    </Text>
-                    <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                      Due{" "}
-                      {new Date(payout.payoutDate).toLocaleDateString("en-PH", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </Text>
-                  </View>
-                  <CurrencyText
-                    centavos={payout.potAmount}
-                    style={{ fontSize: 18, fontWeight: "800", color: "#1D9E75" }}
-                  />
-                </TouchableOpacity>
-              ))}
             </View>
-          )}
-
-          {/* Empty state */}
-          {dashboardData?.totalGroupCount === 0 && (
-            <EmptyState
-              icon="🤝"
-              title="No groups yet"
-              description="Create or join a paluwagan group to get started."
-              action={
-                <View style={{ gap: 12, width: "100%" }}>
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: "#1D9E75",
-                      paddingVertical: 14,
-                      borderRadius: 14,
-                      alignItems: "center",
-                    }}
-                    onPress={() => router.push("/(app)/groups/new")}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15 }}>
-                      Create a Group
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      borderWidth: 2,
-                      borderColor: "#1D9E75",
-                      paddingVertical: 14,
-                      borderRadius: 14,
-                      alignItems: "center",
-                    }}
-                    onPress={() => router.push("/(app)/groups/join")}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={{ color: "#1D9E75", fontWeight: "700", fontSize: 15 }}>
-                      Join with Code
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              }
-            />
-          )}
-        </View>
+          ) : dashboardData?.totalGroupCount === 0 ? (
+            <View style={{ marginHorizontal: 20, alignItems: "center", paddingVertical: 24 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: "#242424", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+                <Ionicons name="people-outline" size={28} color="#ffffff" />
+              </View>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#242424", marginBottom: 8, letterSpacing: -0.3 }}>
+                Start your circle
+              </Text>
+              <Text style={{ fontSize: 14, color: "#242424", opacity: 0.45, textAlign: "center", lineHeight: 21, marginBottom: 28 }}>
+                Create or join a paluwagan group to track contributions and payouts.
+              </Text>
+              <TouchableOpacity
+                style={{ backgroundColor: "#242424", paddingVertical: 15, borderRadius: 999, width: "100%", alignItems: "center" }}
+                onPress={() => router.push("/(app)/groups/new")}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15 }}>Create a Group</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </Skeleton>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
