@@ -1,187 +1,208 @@
-import { useSignIn } from "@clerk/expo";
+import { useSignIn, useSignUp } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+	KeyboardAvoidingView,
+	Platform,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { AuthPrimaryButton } from "@/components/auth/auth-primary-button";
+import { AuthStatusNote } from "@/components/auth/auth-status-note";
+import { OtpInputRow } from "@/components/auth/otp-input-row";
+import { clearEmailDraft } from "@/lib/auth/auth-draft";
+import { APP_TABS_ROUTE } from "@/lib/auth/auth-routes";
 
 const OTP_LENGTH = 6;
 
 export default function VerifyScreen() {
-  const { signIn, fetchStatus } = useSignIn();
-  const router = useRouter();
-  const { phoneNumber } = useLocalSearchParams<{ phoneNumber: string }>();
+	const { signIn, fetchStatus: signInFetch } = useSignIn();
+	const { signUp, fetchStatus: signUpFetch } = useSignUp();
+	const router = useRouter();
+	const insets = useSafeAreaInsets();
+	const { email, flow } = useLocalSearchParams<{ email: string; flow: "signIn" | "signUp" }>();
 
-  const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(""));
-  const [error, setError] = useState<string | null>(null);
-  const inputRefs = useRef<(TextInput | null)[]>([]);
-  const isVerifying = useRef(false);
-  const loading = fetchStatus === "fetching";
+	const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+	const [error, setError] = useState<string | null>(null);
+	const [resent, setResent] = useState(false);
+	const inputRefs = useRef<(TextInput | null)[]>([]);
 
-  const handleChange = (val: string, index: number) => {
-    // Handle paste — distribute digits
-    if (val.length > 1) {
-      const digits = val.replace(/\D/g, "").slice(0, OTP_LENGTH).split("");
-      const next = [...code];
-      digits.forEach((d, i) => {
-        if (index + i < OTP_LENGTH) next[index + i] = d;
-      });
-      setCode(next);
-      const focusIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
-      inputRefs.current[focusIndex]?.focus();
-      if (next.every(Boolean)) void handleVerify(next.join(""));
-      return;
-    }
+	const loading = signInFetch === "fetching" || signUpFetch === "fetching";
+	const fullCode = code.join("");
+	const isComplete = fullCode.length === OTP_LENGTH && !code.includes("");
 
-    const next = [...code];
-    next[index] = val;
-    setCode(next);
-    if (val && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-    if (next.every(Boolean)) void handleVerify(next.join(""));
-  };
+	useEffect(() => {
+		setTimeout(() => inputRefs.current[0]?.focus(), 300);
+	}, []);
 
-  const handleKeyPress = (key: string, index: number) => {
-    if (key === "Backspace" && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
+	const handleChangeDigit = (value: string, index: number) => {
+		// Support paste of full 6-digit code into first input
+		if (index === 0 && value.length === OTP_LENGTH && /^\d+$/.test(value)) {
+			const digits = value.split("");
+			setCode(digits);
+			inputRefs.current[OTP_LENGTH - 1]?.focus();
+			return;
+		}
+		const digit = value.replace(/\D/g, "").slice(-1);
+		const next = [...code];
+		next[index] = digit;
+		setCode(next);
+		if (digit && index < OTP_LENGTH - 1) {
+			inputRefs.current[index + 1]?.focus();
+		}
+	};
 
-  const handleVerify = async (finalCode?: string) => {
-    const otp = finalCode ?? code.join("");
-    if (otp.length < OTP_LENGTH) return;
-    if (isVerifying.current) return;
-    isVerifying.current = true;
+	const handleKeyPress = (key: string, index: number) => {
+		if (key === "Backspace" && !code[index] && index > 0) {
+			const next = [...code];
+			next[index - 1] = "";
+			setCode(next);
+			inputRefs.current[index - 1]?.focus();
+		}
+	};
 
-    setError(null);
+	const extractError = (err: unknown): string => {
+		const e = err as { errors?: { longMessage?: string; message?: string }[]; message?: string };
+		return e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? (err instanceof Error ? err.message : "Something went wrong.");
+	};
 
-    const { error: verifyError } = await signIn.phoneCode.verifyCode({ code: otp });
+	const handleVerify = async () => {
+		if (!isComplete || loading) return;
+		setError(null);
 
-    if (verifyError) {
-      setError(verifyError.longMessage ?? "Invalid code. Please try again.");
-      setCode(Array(OTP_LENGTH).fill(""));
-      inputRefs.current[0]?.focus();
-      isVerifying.current = false;
-      return;
-    }
+		if (flow === "signUp") {
+			const { error: e } = await signUp.verifications.verifyEmailCode({ code: fullCode });
+			if (e) { setError(extractError(e)); return; }
+			const { error: fe } = await signUp.finalize({
+				navigate: async () => { router.replace(APP_TABS_ROUTE); },
+			});
+			if (fe) { setError(extractError(fe)); return; }
+		} else {
+			const { error: e } = await signIn.emailCode.verifyCode({ code: fullCode });
+			if (e) { setError(extractError(e)); return; }
+			const { error: fe } = await signIn.finalize({
+				navigate: async () => { router.replace(APP_TABS_ROUTE); },
+			});
+			if (fe) { setError(extractError(fe)); return; }
+		}
 
-    // Finalize: sets the active session and navigates
-    await signIn.finalize({
-      navigate: async () => {
-        router.replace("/(app)/(tabs)/");
-      },
-    });
-  };
+		await clearEmailDraft();
+	};
 
-  const handleResend = async () => {
-    setError(null);
-    const { error: resendError } = await signIn.phoneCode.sendCode({
-      phoneNumber: phoneNumber ?? "",
-    });
-    if (resendError) {
-      setError(resendError.longMessage ?? "Could not resend code.");
-    }
-  };
+	const handleResend = async () => {
+		setError(null);
+		setResent(false);
+		if (flow === "signUp") {
+			const { error: e } = await signUp.verifications.sendEmailCode();
+			if (e) { setError(extractError(e)); return; }
+		} else {
+			const { error: e } = await signIn.emailCode.sendCode();
+			if (e) { setError(extractError(e)); return; }
+		}
+		setResent(true);
+	};
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 48 }}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ marginBottom: 32 }}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Text style={{ fontSize: 24 }}>←</Text>
-          </TouchableOpacity>
+	return (
+		<KeyboardAvoidingView
+			className="flex-1 bg-[#F5F3EF]"
+			behavior={Platform.OS === "ios" ? "padding" : undefined}
+		>
+			{/* Top bar */}
+			<View
+				className="flex-row items-center justify-between px-5"
+				style={{ paddingTop: insets.top + 10 }}
+			>
+				<TouchableOpacity
+					onPress={() => router.back()}
+					hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+					className="h-10 w-10 items-center justify-center rounded-full bg-ink/8"
+				>
+					<Ionicons name="chevron-back" size={20} color="#242424" />
+				</TouchableOpacity>
 
-          <Text style={{ fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 8 }}>
-            Enter the code
-          </Text>
-          <Text style={{ fontSize: 15, color: "#6B7280", marginBottom: 36 }}>
-            We sent a 6-digit code to{"\n"}
-            <Text style={{ fontWeight: "700", color: "#111827" }}>{phoneNumber}</Text>
-          </Text>
+				{/* Step pills */}
+				<View className="flex-row gap-1.5">
+					<View className="h-[5px] w-8 rounded-full bg-ink/15" />
+					<View className="h-[5px] w-8 rounded-full bg-ink" />
+				</View>
+			</View>
 
-          {/* OTP boxes */}
-          <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
-            {code.map((digit, i) => (
-              <TextInput
-                key={i}
-                ref={(ref) => {
-                  inputRefs.current[i] = ref;
-                }}
-                style={{
-                  flex: 1,
-                  height: 56,
-                  borderWidth: 2,
-                  borderColor: digit ? "#1D9E75" : "#E5E7EB",
-                  borderRadius: 12,
-                  textAlign: "center",
-                  fontSize: 22,
-                  fontWeight: "700",
-                  color: "#111827",
-                  backgroundColor: digit ? "#F0FDF8" : "#FAFAFA",
-                }}
-                value={digit}
-                onChangeText={(val) => handleChange(val, i)}
-                onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
-                keyboardType="number-pad"
-                maxLength={1}
-                autoFocus={i === 0}
-                selectTextOnFocus
-              />
-            ))}
-          </View>
+			{/* Content */}
+			<View className="flex-1 px-6 pt-10">
+				{/* Eyebrow */}
+				<Text
+					className="text-primary text-[11px] uppercase tracking-[2.4px]"
+					style={{ fontWeight: "800" }}
+				>
+					Step 2 — Verify
+				</Text>
 
-          {error && (
-            <View
-              style={{
-                backgroundColor: "#FEF2F2",
-                borderRadius: 10,
-                padding: 12,
-                marginBottom: 16,
-              }}
-            >
-              <Text style={{ color: "#DC2626", fontSize: 13 }}>{error}</Text>
-            </View>
-          )}
+				{/* Headline */}
+				<Text
+					className="mt-3 text-ink"
+					style={{ fontSize: 36, lineHeight: 43, fontWeight: "800", letterSpacing: -0.8 }}
+				>
+					{"Check your\nemail"}
+				</Text>
 
-          <TouchableOpacity
-            style={{
-              backgroundColor: code.every(Boolean) && !loading ? "#1D9E75" : "#A7F3D0",
-              paddingVertical: 16,
-              borderRadius: 16,
-              alignItems: "center",
-              marginBottom: 16,
-            }}
-            onPress={() => void handleVerify()}
-            disabled={!code.every(Boolean) || loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={{ color: "#ffffff", fontSize: 16, fontWeight: "700" }}>Verify</Text>
-            )}
-          </TouchableOpacity>
+				{/* Sub */}
+				<Text className="mt-3 text-ink/50" style={{ fontSize: 15, lineHeight: 22 }}>
+					We sent a 6-digit code to{" "}
+					<Text style={{ fontWeight: "700", color: "#242424" }}>{email}</Text>.
+				</Text>
 
-          <TouchableOpacity onPress={() => void handleResend()} style={{ alignItems: "center" }}>
-            <Text style={{ color: "#1D9E75", fontSize: 14, fontWeight: "600" }}>Resend code</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+				{/* Divider */}
+				<View className="my-8 h-px bg-ink/8" />
+
+				{error && (
+					<View className="mb-4">
+						<AuthStatusNote tone="error" text={error} />
+					</View>
+				)}
+				{resent && !error && (
+					<View className="mb-4">
+						<AuthStatusNote tone="neutral" text="Code resent. Check your inbox." />
+					</View>
+				)}
+
+				{/* OTP inputs */}
+				<OtpInputRow
+					code={code}
+					inputRefs={inputRefs}
+					onChangeDigit={handleChangeDigit}
+					onKeyPressDigit={handleKeyPress}
+				/>
+
+				{/* Resend */}
+				<TouchableOpacity
+					onPress={() => void handleResend()}
+					disabled={loading}
+					className="mt-6 self-start"
+					activeOpacity={0.6}
+				>
+					<Text className="text-ink/45" style={{ fontSize: 14, fontWeight: "600" }}>
+						Didn't get it?{" "}
+						<Text style={{ color: "#1D9E75", fontWeight: "700" }}>Resend code</Text>
+					</Text>
+				</TouchableOpacity>
+			</View>
+
+			{/* Footer */}
+			<View
+				className="px-6 pb-2"
+				style={{ paddingBottom: Math.max(insets.bottom + 12, 28) }}
+			>
+				<AuthPrimaryButton
+					label="Verify & continue"
+					onPress={() => void handleVerify()}
+					loading={loading}
+					disabled={!isComplete}
+				/>
+			</View>
+		</KeyboardAvoidingView>
+	);
 }
