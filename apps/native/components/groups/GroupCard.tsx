@@ -115,7 +115,7 @@ export function GroupCard({ group }: GroupCardProps) {
 					if (group.isRecipientThisCycle) {
 						return (
 							<Text style={{ fontSize: 12, color: subColor, marginTop: 10, fontWeight: "600" }}>
-								🏆 You receive next
+								🏆 You receive next · ₱{(group.potAmount / 100).toLocaleString("en-PH")}
 							</Text>
 						);
 					}

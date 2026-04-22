@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { Skeleton, SkeletonBlock } from "@/components/ui/Skeleton";
 
+import type { GroupStatus } from "@/types";
 type GroupItem = Parameters<typeof GroupCard>[0]["group"];
 
 function GroupsSkeleton() {

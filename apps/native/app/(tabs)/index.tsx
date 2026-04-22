@@ -8,26 +8,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { CurrencyText } from "@/components/ui/CurrencyText";
 import { Skeleton, SkeletonBlock } from "@/components/ui/Skeleton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { colorForString } from "@/utils/avatarColors";
+import { formatDueDate } from "@/utils/date";
 
-const GROUP_COLORS = ["#E0533D", "#E78C9D", "#EED868", "#377CC8", "#469B88", "#9DA7D0"];
-
-function colorForName(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return GROUP_COLORS[Math.abs(h) % GROUP_COLORS.length]!;
-}
-
-function formatDueDate(ts?: number): string {
-  if (!ts) return "";
-  const d = new Date(ts);
-  const today = new Date();
-  const diff = Math.round((d.getTime() - today.setHours(0, 0, 0, 0)) / 86400000);
-  if (diff === 0) return "today";
-  if (diff === 1) return "tomorrow";
-  if (diff <= 6) return d.toLocaleDateString("en-PH", { weekday: "long" });
-  return d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
-}
-
+import type { GroupStatus } from "@/types";
 type DashboardData = NonNullable<ReturnType<typeof useQuery<typeof api.dashboard.getDashboardData>>>;
 type GroupHealthRow = NonNullable<DashboardData["groupHealthRows"]>[number];
 
@@ -97,7 +81,7 @@ function HeroSection({ data }: { data: DashboardData }) {
 
 function GroupHealthRowItem({ row }: { row: NonNullable<GroupHealthRow> }) {
   const router = useRouter();
-  const color = colorForName(row.name);
+  const color = colorForString(row.name);
   const isForming = row.status === "forming";
 
   return (
@@ -139,18 +123,6 @@ export default function PulseScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#F5F3EF" }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View style={{ flex: 1, marginRight: 16 }}>
-            <Text style={{ fontSize: 13, color: "#242424", opacity: 0.4, fontWeight: "600", marginBottom: 2 }}>Pulse</Text>
-            <Text style={{ fontSize: 26, fontWeight: "800", color: "#242424", letterSpacing: -0.5 }} numberOfLines={1}>
-              {firstName}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push("/(app)/(tabs)/profile")} activeOpacity={0.8}>
-            <Avatar name={convexProfile?.displayName ?? convexProfile?.email} color={convexProfile?.avatarColor} size="lg" />
-          </TouchableOpacity>
-        </View>
 
         {/* Hero */}
         <Skeleton isLoading={isLoading} skeleton={<View style={{ marginHorizontal: 20, marginBottom: 28 }}><SkeletonBlock style={{ height: 100, borderRadius: 20 }} /></View>}>
