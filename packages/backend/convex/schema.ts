@@ -3,17 +3,18 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    clerkId: v.string(), // Clerk tokenIdentifier (sub)
-    phoneNumber: v.string(), // E.164 format: +639XXXXXXXXX
+    clerkId: v.string(),
+    email: v.string(),
+    phoneNumber: v.optional(v.string()),
     displayName: v.optional(v.string()),
-    avatarInitials: v.string(), // First 1-2 chars of name/phone
-    avatarColor: v.string(), // Hex color, deterministically assigned
+    avatarInitials: v.string(),
+    avatarColor: v.string(),
     expoPushToken: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_clerk_id", ["clerkId"])
-    .index("by_phone", ["phoneNumber"]),
+    .index("by_email", ["email"]),
 
   groups: defineTable({
     name: v.string(),
