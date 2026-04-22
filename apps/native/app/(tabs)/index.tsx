@@ -4,14 +4,12 @@ import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Avatar } from "@/components/ui/Avatar";
 import { CurrencyText } from "@/components/ui/CurrencyText";
 import { Skeleton, SkeletonBlock } from "@/components/ui/Skeleton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { colorForString } from "@/utils/avatarColors";
 import { formatDueDate } from "@/utils/date";
 
-import type { GroupStatus } from "@/types";
 type DashboardData = NonNullable<ReturnType<typeof useQuery<typeof api.dashboard.getDashboardData>>>;
 type GroupHealthRow = NonNullable<DashboardData["groupHealthRows"]>[number];
 
@@ -35,13 +33,13 @@ function HeroSection({ data }: { data: DashboardData }) {
 
   return (
     <TouchableOpacity
-      style={{ marginHorizontal: 20, marginBottom: 28, borderRadius: 20, backgroundColor: bg, padding: 22 }}
+      className="mx-5 mb-7 rounded-2xl" style={{ backgroundColor: bg, padding: 22 }}
       onPress={() => { if (hero.groupId) router.push(`/(app)/groups/${hero.groupId}`); }}
       activeOpacity={hero.groupId ? 0.8 : 1}
     >
       {hero.type === "owe" && (
         <>
-          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>
+          <Text className="text-xs font-bold uppercase tracking-wider mb-1 text-white/55">
             You owe this cycle
           </Text>
           <CurrencyText centavos={hero.amount ?? 0} style={{ fontSize: 36, fontWeight: "800", color: "#ffffff", letterSpacing: -1, lineHeight: 42 }} />
@@ -52,9 +50,9 @@ function HeroSection({ data }: { data: DashboardData }) {
       )}
       {hero.type === "receive" && (
         <>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <View className="flex-row items-center gap-2 mb-1">
             <Ionicons name="trophy" size={14} color="rgba(255,255,255,0.7)" />
-            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.5 }}>
+            <Text className="text-xs font-bold uppercase tracking-wider text-white/70">
               You receive the pot
             </Text>
           </View>
@@ -66,11 +64,11 @@ function HeroSection({ data }: { data: DashboardData }) {
       )}
       {hero.type === "clear" && (
         <>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <View className="flex-row items-center gap-2 mb-1">
             <Ionicons name="checkmark-circle" size={18} color="#1D9E75" />
-            <Text style={{ fontSize: 15, fontWeight: "800", color: "#242424" }}>You're all clear</Text>
+            <Text className="text-base font-extrabold text-black">You're all clear</Text>
           </View>
-          <Text style={{ fontSize: 13, color: "rgba(36,36,36,0.45)", fontWeight: "500" }}>
+          <Text className="text-xs text-black/45 font-medium">
             No payments due. Nice work.
           </Text>
         </>
@@ -104,7 +102,7 @@ function GroupHealthRowItem({ row }: { row: NonNullable<GroupHealthRow> }) {
           {groupStatusString(row)}
         </Text>
       </View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <View className="flex-row items-center gap-1">
         {row.isRecipient && <Ionicons name="trophy" size={13} color="#1D9E75" />}
         <Ionicons name="chevron-forward" size={14} color="#242424" style={{ opacity: 0.2 }} />
       </View>
@@ -121,7 +119,7 @@ export default function PulseScreen() {
   const firstName = convexProfile?.displayName?.split(" ")[0] ?? convexProfile?.email?.split("@")[0] ?? "there";
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F5F3EF" }}>
+    <View className="flex-1 bg-[#F5F3EF]">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}>
 
         {/* Hero */}
@@ -145,34 +143,34 @@ export default function PulseScreen() {
         >
           {dashboardData && dashboardData.groupHealthRows && dashboardData.groupHealthRows.length > 0 ? (
             <View>
-              <Text style={{ fontSize: 11, fontWeight: "800", color: "#242424", opacity: 0.32, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4, paddingHorizontal: 20 }}>
+              <Text className="text-xs font-extrabold text-black/30 tracking-widest uppercase mb-1 px-5">
                 Your Groups
               </Text>
-              <View style={{ borderTopWidth: 1, borderTopColor: "rgba(36,36,36,0.06)" }}>
+              <View className="border-t border-black/5">
                 <FlatList
                   data={dashboardData.groupHealthRows.filter(Boolean)}
                   keyExtractor={(row) => row!.groupId}
                   renderItem={({ item }) => <GroupHealthRowItem row={item!} />}
                   ItemSeparatorComponent={() => (
-                    <View style={{ height: 1, backgroundColor: "rgba(36,36,36,0.06)", marginLeft: 40 }} />
+                    <View className="h-[1px] bg-black/5 ml-10" />
                   )}
                   scrollEnabled={false}
                 />
               </View>
             </View>
           ) : dashboardData?.totalGroupCount === 0 ? (
-            <View style={{ marginHorizontal: 20, alignItems: "center", paddingVertical: 24 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: "#242424", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+            <View className="mx-5 items-center py-6">
+              <View className="w-16 h-16 rounded-2xl bg-black items-center justify-center mb-4">
                 <Ionicons name="people-outline" size={28} color="#ffffff" />
               </View>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: "#242424", marginBottom: 8, letterSpacing: -0.3 }}>
+              <Text className="text-lg font-extrabold text-black mb-2 tracking-tight">
                 Start your circle
               </Text>
-              <Text style={{ fontSize: 14, color: "#242424", opacity: 0.45, textAlign: "center", lineHeight: 21, marginBottom: 28 }}>
+              <Text className="text-sm text-black/45 text-center leading-[21px] mb-7">
                 Create or join a paluwagan group to track contributions and payouts.
               </Text>
               <TouchableOpacity
-                style={{ backgroundColor: "#242424", paddingVertical: 15, borderRadius: 999, width: "100%", alignItems: "center" }}
+                className="bg-black py-[15px] rounded-full w-full items-center"
                 onPress={() => router.push("/(app)/groups/new")}
                 activeOpacity={0.8}
               >

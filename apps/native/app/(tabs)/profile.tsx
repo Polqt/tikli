@@ -14,10 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/ui/Avatar";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { initialsFromName } from "@/utils/avatarColors";
 
-// Divider component for reuse
-const DIV = <View style={{ height: 1, backgroundColor: "rgba(36,36,36,0.07)", marginLeft: 52 }} />;
 
 function Row({
 	icon,
@@ -59,13 +56,6 @@ function Row({
 	);
 }
 
-function Label({ text }: { text: string }) {
-	return (
-		<Text style={{ fontSize: 11, fontWeight: "800", color: "#242424", opacity: 0.32, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14, marginTop: 32 }}>
-			{text}
-		</Text>
-	);
-}
 
 export default function ProfileScreen() {
 	const { clerkUser, convexProfile } = useCurrentUser();
@@ -157,29 +147,29 @@ export default function ProfileScreen() {
 
 				{/* Sections */}
 				<View style={{ paddingHorizontal: 20 }}>
-					<Label text="Account" />
-					<Row icon="mail-outline" iconBg="rgba(36,36,36,0.07)" label="Email" sub={email} hideChevron />
-					{DIV}
-					<Row icon="person-outline" iconBg="rgba(36,36,36,0.07)" label="Display name" sub={convexProfile?.displayName ?? "Not set"} onPress={openEdit} />
+					<SectionLabel>Account</SectionLabel>
+<Row icon="mail-outline" iconBg="rgba(36,36,36,0.07)" label="Email" sub={email} hideChevron />
+<Divider className="ml-13" />
+<Row icon="person-outline" iconBg="rgba(36,36,36,0.07)" label="Display name" sub={convexProfile?.displayName ?? "Not set"} onPress={openEdit} />
 
-					<Label text="App" />
-					<Row icon="notifications-outline" iconBg="rgba(36,36,36,0.07)" label="Notifications" onPress={() => {}} />
-					{DIV}
-					<Row icon="help-circle-outline" iconBg="rgba(36,36,36,0.07)" label="Help & Support" onPress={() => {}} />
+<SectionLabel>App</SectionLabel>
+<Row icon="notifications-outline" iconBg="rgba(36,36,36,0.07)" label="Notifications" onPress={() => {}} />
+<Divider className="ml-13" />
+<Row icon="help-circle-outline" iconBg="rgba(36,36,36,0.07)" label="Help & Support" onPress={() => {}} />
 
-					<Label text="Session" />
-					<Row
-						icon="log-out-outline"
-						iconBg="#FEF2F2"
-						label="Sign Out"
-						destructive
-						onPress={() =>
-							Alert.alert("Sign Out", "Are you sure?", [
-								{ text: "Cancel", style: "cancel" },
-								{ text: "Sign Out", style: "destructive", onPress: () => signOut() },
-							])
-						}
-					/>
+<SectionLabel>Session</SectionLabel>
+<Row
+  icon="log-out-outline"
+  iconBg="#FEF2F2"
+  label="Sign Out"
+  destructive
+  onPress={() =>
+    Alert.alert("Sign Out", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => signOut() },
+    ])
+  }
+/>
 				</View>
 
 				<Text style={{ textAlign: "center", fontSize: 11, color: "#242424", opacity: 0.16, fontWeight: "700", marginTop: 44, letterSpacing: 1 }}>

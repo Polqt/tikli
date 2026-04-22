@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { Skeleton, SkeletonBlock } from "@/components/ui/Skeleton";
 
-import type { GroupStatus } from "@/types";
 type GroupItem = Parameters<typeof GroupCard>[0]["group"];
 
 function GroupsSkeleton() {
@@ -27,20 +26,20 @@ export default function GroupsScreen() {
 	const isLoading = groups === undefined;
 
 	return (
-		<View style={{ flex: 1, backgroundColor: "#F5F3EF" }}>
+		<View className="flex-1 bg-[#F5F3EF]">
 			<View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-				<View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-					<Text style={{ fontSize: 28, fontWeight: "800", color: "#242424", letterSpacing: -0.5 }}>
+				<View className="flex-row items-baseline gap-2">
+					<Text className="text-2xl font-extrabold text-black tracking-tight">
 						My Groups
 					</Text>
 					{groups && groups.length > 0 && (
-						<Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(36,36,36,0.35)" }}>
+						<Text className="text-sm font-bold text-black/35">
 							{groups.length}
 						</Text>
 					)}
 				</View>
 				<TouchableOpacity
-					style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: "#1D9E75", alignItems: "center", justifyContent: "center" }}
+					className="w-10 h-10 rounded-xl bg-primary items-center justify-center"
 					onPress={() => router.push("/(app)/groups/new")}
 					accessibilityLabel="Create group"
 				>
@@ -51,24 +50,24 @@ export default function GroupsScreen() {
 			<Skeleton isLoading={isLoading} skeleton={<GroupsSkeleton />}>
 				{groups && groups.length === 0 ? (
 					<View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-						<View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: "#242424", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+						<View className="w-16 h-16 rounded-2xl bg-black items-center justify-center mb-5">
 							<Ionicons name="people-outline" size={28} color="#ffffff" />
 						</View>
-						<Text style={{ fontSize: 20, fontWeight: "800", color: "#242424", textAlign: "center", marginBottom: 8, letterSpacing: -0.3 }}>
+						<Text className="text-lg font-extrabold text-black text-center mb-2 tracking-tight">
 							No groups yet
 						</Text>
-						<Text style={{ fontSize: 14, color: "#242424", opacity: 0.45, textAlign: "center", lineHeight: 21, marginBottom: 32 }}>
+						<Text className="text-sm text-black/45 text-center leading-[21px] mb-8">
 							Start a paluwagan circle or join one with an invite code.
 						</Text>
 						<TouchableOpacity
-							style={{ backgroundColor: "#242424", paddingVertical: 15, borderRadius: 999, marginBottom: 12, width: "100%", alignItems: "center" }}
+							className="bg-black py-[15px] rounded-full mb-3 w-full items-center"
 							onPress={() => router.push("/(app)/groups/new")}
 							activeOpacity={0.8}
 						>
 							<Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15 }}>Create a Group</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
-							style={{ paddingVertical: 15, width: "100%", alignItems: "center" }}
+							className="py-[15px] w-full items-center"
 							onPress={() => router.push("/(app)/groups/join")}
 							activeOpacity={0.8}
 						>
@@ -83,13 +82,13 @@ export default function GroupsScreen() {
 						showsVerticalScrollIndicator={false}
 						contentContainerStyle={{ paddingTop: 4, paddingBottom: insets.bottom + 100 }}
 						ListFooterComponent={
-							<View style={{ marginHorizontal: 20, marginTop: 8 }}>
+							<View className="mx-5 mt-2">
 								<TouchableOpacity
 									style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 16 }}
 									onPress={() => router.push("/(app)/groups/new")}
 									activeOpacity={0.7}
 								>
-									<View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#1D9E75", alignItems: "center", justifyContent: "center" }}>
+									<View className="w-8 h-8 rounded-lg bg-primary items-center justify-center">
 										<Ionicons name="add" size={18} color="#ffffff" />
 									</View>
 									<Text style={{ fontSize: 14, fontWeight: "700", color: "#1D9E75" }}>Create New Group</Text>
@@ -99,7 +98,7 @@ export default function GroupsScreen() {
 									onPress={() => router.push("/(app)/groups/join")}
 									activeOpacity={0.7}
 								>
-									<View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(36,36,36,0.08)", alignItems: "center", justifyContent: "center" }}>
+									<View className="w-8 h-8 rounded-lg bg-black/10 items-center justify-center">
 										<Ionicons name="link-outline" size={16} color="#242424" />
 									</View>
 									<Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(36,36,36,0.5)" }}>Join with Code</Text>
